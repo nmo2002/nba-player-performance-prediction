@@ -1,0 +1,38 @@
+# Core data processing
+pandas>=2.0.0
+numpy>=1.24.0
+scipy>=1.10.0
+
+# Data visualization
+plotly>=5.18.0
+matplotlib>=3.7.0
+seaborn>=0.12.0
+
+# Web application
+streamlit>=1.28.0
+
+# Machine learning
+scikit-learn>=1.2.0
+statsmodels>=0.14.0
+xgboost>=1.7.0
+
+# NBA data
+nba_api>=1.2.0
+
+# Network analysis
+networkx>=3.0
+python-louvain>=0.16
+pyvis>=0.3.0
+
+# Image processing
+pillow>=10.0.0
+
+# Utilities
+requests>=2.30.0
+psutil>=5.9.0
+
+# Dependencies for metrics and API handling
+joblib>=1.2.0
+protobuf>=4.0.0
+urllib3>=2.0.0
+tzdata>=2023.0

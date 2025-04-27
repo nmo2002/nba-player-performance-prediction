@@ -1,0 +1,3 @@
+@echo off
+echo Starting NBA Analytics Dashboard...
+streamlit run app.py
