@@ -48,8 +48,8 @@ pyvis
 
 1. **Clone the repository**
    ```bash
-   git clone <your_repository_url>
-   cd <repository_folder>
+   git clone https://github.com/nmo2002/nba-player-performance-prediction.git
+   cd https://github.com/nmo2002/nba-player-performance-prediction.git
    ```
 
 2. **Create and activate a virtual environment (optional but recommended)**
