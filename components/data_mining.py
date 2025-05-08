@@ -423,13 +423,8 @@ def render_player_similarity(player_df, stats_df, teams_df):
             net_tab, list_tab = st.tabs(["Network Visualization", "Similar Players"])
             
             with net_tab:
-                # Add a button to center visualization on selected player
-                if st.button("🔍 Focus on Selected Player"):
-                    # This would need a JavaScript callback or custom component
-                    # to adjust the network camera/zoom to center on player
-                    st.session_state.focus_requested = True
-    
                 # Pass the focused player ID to visualize_network
+                # This will highlight the selected player with a thick red border and annotation
                 visualize_network(G, 'player', selected_features, central_entity_id=player_id)
                 
             with list_tab:
