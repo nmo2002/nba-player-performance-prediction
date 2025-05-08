@@ -316,6 +316,15 @@ def render_performance_settings():
 
 def main():
     """Main application function with progressive loading"""
+    st.markdown("""
+    <style>
+    /* Hide Streamlit's top progress bar */
+    div.stProgress > div > div {
+        display: none;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    
     # Initialize performance monitoring
     start_time = time.time()
     
