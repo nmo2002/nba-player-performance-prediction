@@ -320,13 +320,16 @@ def visualize_career_trajectory(player_stats, selected_stat, next_season, model_
         showlegend=False
     ))
     
-    # Add predictions
+    # Add predictions with explicit hover information
     fig.add_trace(go.Scatter(
         x=future_seasons, 
         y=future_values,
         mode='lines+markers',
         name=f'Predicted ({min(future_seasons)}-{max(future_seasons)})',
-        line=dict(color='red', dash='dash')
+        line=dict(color='red', dash='dash'),
+        marker=dict(size=8),  # Larger markers
+        text=[f"{selected_stat.upper()}: {value}" for value in future_values],
+        hoverinfo='text',
     ))
     
     # Add confidence interval for predictions (only for linear regression)
@@ -342,7 +345,8 @@ def visualize_career_trajectory(player_stats, selected_stat, next_season, model_
             fillcolor='rgba(231,107,243,0.2)',
             line=dict(color='rgba(255,255,255,0)'),
             showlegend=True,
-            name='95% Confidence Interval'
+            name='95% Confidence Interval',
+            hoverinfo='skip'  # Skip hover info for the confidence interval
         ))
     
     fig.update_layout(
