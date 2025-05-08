@@ -292,89 +292,72 @@ def render_sidebar():
     return nav_selection
 
 def apply_custom_styling():
-    """Apply custom styling to the app - dark mode only"""
-    # Dark theme values
-    primary_color = "#4da6ff"       # Light blue
-    secondary_color = "#ff9f45"     # Light orange (unused)
-    background_color = "#121212"    # Very dark gray
-    text_color = "#f0f0f0"          # Off-white
-    card_background = "#1e1e1e"     # Dark gray
-    sidebar_color = "#262626"       # Slightly lighter dark gray
-    
-    # Generate CSS
-    st.markdown(f"""
+    """Apply custom styling that works with both light and dark mode"""
+    st.markdown("""
     <style>
-        /* Main layout */
-        .main .block-container {{
-            padding-top: 2rem;
-            padding-bottom: 2rem;
-            background-color: {background_color};
-        }}
-        
-        /* Force background color */
-        .stApp {{
-            background-color: {background_color} !important;
-        }}
-        
-        /* Typography */
-        h1, h2, h3, h4, h5, h6 {{
-            font-family: 'Roboto', sans-serif !important;
-            font-weight: 700 !important;
-            color: {primary_color} !important;
-        }}
-        
-        p, span, div, li {{
-            color: {text_color} !important;
-        }}
-        
-        /* Sidebar styling */
-        section[data-testid="stSidebar"] {{
-            background-color: {sidebar_color} !important;
-        }}
-        
-        /* Cards */
-        .player-card {{
-            background-color: {card_background};
-            border-radius: 10px;
-            padding: 1rem;
-            margin-bottom: 1rem;
-            display: flex;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-        }}
-        
-        .player-card-image {{
-            width: 80px;
-            height: 80px;
-            object-fit: cover;
-            border-radius: 50%;
-        }}
-        
-        .player-card-content {{
-            margin-left: 1rem;
-            flex-grow: 1;
-        }}
-        
-        .player-card-name {{
-            font-weight: bold;
-            font-size: 1.2rem;
-            margin-bottom: 0.3rem;
-            color: {primary_color} !important;
-        }}
-        
-        .player-card-info {{
-            font-size: 0.9rem;
-            margin-bottom: 0.5rem;
-            opacity: 0.8;
-        }}
-        
-        .player-card-stats {{
-            font-size: 0.9rem;
-        }}
-        
-        .player-card-stats span {{
-            margin-right: 0.8rem;
-            display: inline-block;
-        }}
+    /* Theme-compatible styling that works with both light and dark mode */
+    
+    /* Typography enhancements */
+    h1, h2, h3, h4, h5, h6 {
+        font-family: 'Roboto', sans-serif;
+        font-weight: 700;
+    }
+    
+    /* Cards with theme-aware colors */
+    .player-card {
+        background-color: var(--secondary-background-color);
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        display: flex;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    }
+    
+    .player-card-image {
+        width: 80px;
+        height: 80px;
+        object-fit: cover;
+        border-radius: 50%;
+    }
+    
+    .player-card-content {
+        margin-left: 1rem;
+        flex-grow: 1;
+    }
+    
+    .player-card-name {
+        font-weight: bold;
+        font-size: 1.2rem;
+        margin-bottom: 0.3rem;
+        color: var(--primary-color);
+    }
+    
+    .player-card-info {
+        font-size: 0.9rem;
+        margin-bottom: 0.5rem;
+        opacity: 0.8;
+    }
+    
+    .player-card-stats {
+        font-size: 0.9rem;
+    }
+    
+    .player-card-stats span {
+        margin-right: 0.8rem;
+        display: inline-block;
+    }
+    
+    /* Table enhancements */
+    .dataframe th {
+        background-color: var(--secondary-background-color);
+    }
+    
+    /* Card hover effects */
+    .player-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 8px rgba(0, 0, 0, 0.4);
+        transition: all 0.2s ease;
+    }
     </style>
     """, unsafe_allow_html=True)
 
