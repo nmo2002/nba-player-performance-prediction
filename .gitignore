@@ -3,8 +3,5 @@
 __pycache__/
 *.pyc
 
-# Ignore data files
-*.csv
-
 # Ignore .venv directories
 .venv/
