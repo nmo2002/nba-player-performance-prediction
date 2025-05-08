@@ -266,11 +266,21 @@ def visualize_prediction_comparison(predictions, validation_data, stats_to_predi
 
 def display_future_predictions(future_predictions, current_data, stats_to_predict):
     """Display future predictions in a styled table"""
+    
+    # Prepare data with appropriate format for each stat type
+    changes = []
+    for stat in stats_to_predict:
+        diff = future_predictions[stat] - current_data[stat].iloc[0]
+        if stat.endswith('_pct'):  # For percentage stats
+            changes.append(f"{diff:+.3f}")  # 3 decimal places for percentages
+        else:
+            changes.append(f"{diff:+.1f}")  # 1 decimal place for counting stats
+    
     future_df = pd.DataFrame({
         'Statistic': stats_to_predict,
         'Projected Value': [future_predictions[stat] for stat in stats_to_predict],
         'Current Value': [current_data[stat].iloc[0] for stat in stats_to_predict],
-        'Change': [f"{future_predictions[stat] - current_data[stat].iloc[0]:+.1f}" for stat in stats_to_predict]
+        'Change': changes
     })
     
     # Style the change column
