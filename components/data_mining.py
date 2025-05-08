@@ -423,8 +423,14 @@ def render_player_similarity(player_df, stats_df, teams_df):
             net_tab, list_tab = st.tabs(["Network Visualization", "Similar Players"])
             
             with net_tab:
-                # Render network visualization
-                visualize_network(G, 'player', selected_features)
+                # Add a button to center visualization on selected player
+                if st.button("🔍 Focus on Selected Player"):
+                    # This would need a JavaScript callback or custom component
+                    # to adjust the network camera/zoom to center on player
+                    st.session_state.focus_requested = True
+    
+                # Pass the focused player ID to visualize_network
+                visualize_network(G, 'player', selected_features, central_entity_id=player_id)
                 
             with list_tab:
                 # Display similar players table
@@ -979,12 +985,21 @@ def identify_similar_teams(team_name, team_stats_df, stats_to_include=None, top_
     else:
         return pd.DataFrame({'Team': [], 'Similarity': []})
 
-def visualize_network(G, entity_type='player', features=None):
+def visualize_network(G, entity_type='player', features=None, central_entity_id=None):
     """Generic network visualization for both players and teams"""
     if G is None:
         st.warning(f"No {entity_type} network available.")
         return
-        
+    
+    # Check if the central entity exists in the network
+    if central_entity_id is not None and central_entity_id not in G.nodes():
+        st.warning(f"⚠️ The selected {entity_type} doesn't appear in the network with current similarity threshold. Try lowering the threshold to include more connections.")
+        # Option to show all players by reducing threshold
+        if st.button("Lower Similarity Threshold"):
+            if 'similarity_threshold' in st.session_state:
+                st.session_state.similarity_threshold = max(0.5, st.session_state.similarity_threshold - 0.1)
+                st.experimental_rerun()
+    
     # Network statistics
     st.subheader("Network Statistics")
     
@@ -1022,8 +1037,6 @@ def visualize_network(G, entity_type='player', features=None):
         edge_x.extend([x0, x1, None])
         edge_y.extend([y0, y1, None])
         
-        # entity1 = G.nodes[edge[0]]['name']
-        # entity2 = G.nodes[edge[1]]['name']
         similarity = G.edges[edge]['weight']
         
         edge_text.append(f"{edge[0]} - {edge[1]}: {similarity:.2f} similarity")
@@ -1033,6 +1046,12 @@ def visualize_network(G, entity_type='player', features=None):
     node_text = []
     node_size = []
     node_color = []
+    node_line_color = []  # For node border colors
+    node_line_width = []  # For node border widths
+    
+    # Keep track of selected player position for focusing
+    selected_x, selected_y = None, None
+    selected_name = None
     
     for node in G.nodes():
         x, y = pos[node]
@@ -1055,8 +1074,20 @@ def visualize_network(G, entity_type='player', features=None):
                     hover_text += f"<br>{feat}: {stat_format.format(stat_value)}"
         
         node_text.append(hover_text)
-        node_size.append(10 + (degree * 2))  # Size based on connections
-        node_color.append(community)  # Color based on community
+        
+        # Apply special highlighting for the central entity
+        if node == central_entity_id:
+            node_size.append(15 + (degree * 2))  # Make selected node bigger
+            node_color.append(community)  # Keep community color
+            node_line_color.append('red')  # Bright red outline
+            node_line_width.append(6)  # Much thicker border
+            selected_x, selected_y = x, y  # Store position for focusing
+            selected_name = node_name
+        else:
+            node_size.append(10 + (degree * 2))  # Regular size
+            node_color.append(community)  # Regular color
+            node_line_color.append('DarkSlateGrey')  # Regular border
+            node_line_width.append(2)  # Regular width
     
     # Create plot
     fig = go.Figure()
@@ -1070,7 +1101,7 @@ def visualize_network(G, entity_type='player', features=None):
         mode='lines'
     ))
     
-    # Add nodes
+    # Add nodes with customized borders
     fig.add_trace(go.Scatter(
         x=node_x, y=node_y,
         mode='markers',
@@ -1089,9 +1120,38 @@ def visualize_network(G, entity_type='player', features=None):
                 ),
                 xanchor='left'
             ),
-            line=dict(width=2, color='DarkSlateGrey')
+            line=dict(
+                color=node_line_color,  # Apply the custom border colors
+                width=node_line_width   # Apply the custom border widths
+            )
         )
     ))
+    
+    # Add callout annotation for the selected player
+    if selected_x is not None and selected_y is not None:
+        fig.add_annotation(
+            x=selected_x,
+            y=selected_y,
+            text=f"👉 {selected_name}",
+            showarrow=True,
+            arrowhead=2,
+            arrowsize=1,
+            arrowwidth=2,
+            arrowcolor="red",
+            ax=40,
+            ay=-40,
+            font=dict(
+                size=14,
+                color="red",
+                family="Arial",
+                weight="bold"
+            ),
+            bordercolor="red",
+            borderwidth=2,
+            borderpad=4,
+            bgcolor="white",
+            opacity=0.8
+        )
     
     # Update layout
     fig.update_layout(
