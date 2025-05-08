@@ -1,0 +1,7 @@
+# This will ignore all __pycache__ directories in the project
+# and all .pyc files in those directories
+__pycache__/
+*.pyc
+
+# Ignore .venv directories
+.venv/
