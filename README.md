@@ -114,10 +114,10 @@ Adjust visualization quality from the sidebar:
 
 The project deliverables include:
 
-- **GitHub Repository:** Contains all source code, testing data, and documentation.
-- **Presentation:** A summary detailing methods, outcomes, and predictions.
-- **Final Report:** Comprehensive analysis, visualizations, and detailed insights.
-- **Code & Deliverables Submission:** A compressed file with all source code, testing data, and related documentation submitted under the "Code & Deliverables" assignment.
+- **GitHub Repository:** [NBA Player Performance Prediction GitHub Repository](https://github.com/nmo2002/nba-player-performance-prediction)
+- **Presentation:** [NBA Player Performance Prediction Presentation](https://docs.google.com/presentation/d/1pIjfEcWEjt8tqQoxdFzmtk8BGU-bxss8bA7sv2b2Or8/edit?usp=sharing)
+- **Final Report:** Comprehensive analysis, visualizations, and detailed insights (currently in progress).
+- **Code & Deliverables Submission:** Repository containing all source code, testing data, and related documentation (this README).
 
 ---
 
