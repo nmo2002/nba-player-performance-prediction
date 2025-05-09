@@ -116,7 +116,7 @@ The project deliverables include:
 
 - **GitHub Repository:** [NBA Player Performance Prediction GitHub Repository](https://github.com/nmo2002/nba-player-performance-prediction)
 - **Presentation:** [NBA Player Performance Prediction Presentation](https://docs.google.com/presentation/d/1pIjfEcWEjt8tqQoxdFzmtk8BGU-bxss8bA7sv2b2Or8/edit?usp=sharing)
-- **Final Report:** Comprehensive analysis, visualizations, and detailed insights (currently in progress).
+- **Final Report:** [NBA Player Performance Prediction Report](https://github.com/nmo2002/nba-player-performance-prediction/blob/main/NBA_Player_Performance_Prediction_Report.pdf)
 - **Code & Deliverables Submission:** Repository containing all source code, testing data, and related documentation (this README).
 
 ---
