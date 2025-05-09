@@ -141,94 +141,124 @@ def render_player_clustering(player_df, stats_df, teams_df):
     # Number of clusters
     num_clusters = st.slider("Number of clusters", min_value=2, max_value=10, value=5, key="num_clusters")
     
+    # Run clustering when button is clicked
     if len(selected_features) >= 2 and st.button("Run Clustering"):
         with st.spinner("Clustering players..."):
             # Perform clustering
             clusters = perform_clustering(player_stats, selected_features, num_clusters)
             
-            # Display results
-            st.subheader("Clustering Results")
-            
-            # Display number of players in each cluster
-            cluster_counts = clusters['cluster'].value_counts().sort_index()
-            
-            col1, col2 = st.columns([3, 1])
-            with col1:
-                # Create bar chart of cluster sizes
-                fig = px.bar(
-                    x=cluster_counts.index,
-                    y=cluster_counts.values,
-                    labels={'x': 'Cluster', 'y': 'Number of Players'},
-                    title="Players per Cluster"
-                )
-                st.plotly_chart(fig, use_container_width=True)
-            
-            with col2:
-                # Display counts
-                for cluster, count in cluster_counts.items():
-                    st.metric(f"Cluster {cluster}", count)
-            
-            # Create PCA visualization
-            X_scaled, _ = preprocess_data(clusters, selected_features)
-            X_pca, pca = create_pca_projection(X_scaled)
-            
-            pca_df = pd.DataFrame({
-                'PC1': X_pca[:, 0],
-                'PC2': X_pca[:, 1],
-                'Cluster': clusters['cluster'],
-                'Player': clusters['full_name'],
-                'Team': clusters['team']
-            })
-            
-            # Add original features to hover data
-            for feature in selected_features:
-                pca_df[feature] = clusters[feature]
-                
-            # Create scatter plot
-            fig = px.scatter(
-                pca_df,
-                x='PC1',
-                y='PC2',
-                color='Cluster',
-                hover_name='Player',
-                hover_data=['Team'] + selected_features,
-                title="Player Clusters - PCA Visualization",
-                color_continuous_scale=px.colors.qualitative.G10
+            # Store results in session state
+            st.session_state.clusters = clusters
+            st.session_state.selected_features = selected_features
+            st.session_state.cluster_options = sorted([int(cluster) for cluster in clusters['cluster'].unique()])
+            # Reset selected cluster on new clustering
+            st.session_state.selected_cluster = st.session_state.cluster_options[0]
+    
+    # Display results if clustering has been performed
+    if 'clusters' in st.session_state:
+        clusters = st.session_state.clusters
+        selected_features = st.session_state.selected_features
+        
+        st.subheader("Clustering Results")
+        
+        # Display number of players in each cluster
+        cluster_counts = clusters['cluster'].value_counts().sort_index()
+        
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            # Create bar chart of cluster sizes
+            fig = px.bar(
+                x=cluster_counts.index,
+                y=cluster_counts.values,
+                labels={'x': 'Cluster', 'y': 'Number of Players'},
+                title="Players per Cluster"
             )
-            
             st.plotly_chart(fig, use_container_width=True)
+        
+        with col2:
+            # Display counts
+            for cluster, count in cluster_counts.items():
+                st.metric(f"Cluster {cluster}", count)
+        
+        # Create PCA visualization
+        X_scaled, _ = preprocess_data(clusters, selected_features)
+        X_pca, pca = create_pca_projection(X_scaled)
+        
+        pca_df = pd.DataFrame({
+            'PC1': X_pca[:, 0],
+            'PC2': X_pca[:, 1],
+            'Cluster': clusters['cluster'],
+            'Player': clusters['full_name'],
+            'Team': clusters['team']
+        })
+        
+        # Add original features to hover data
+        for feature in selected_features:
+            pca_df[feature] = clusters[feature]
             
-            # Display explained variance
-            explained_variance = pca.explained_variance_ratio_
-            st.info(f"PC1 explains {explained_variance[0]*100:.1f}% of the variance, PC2 explains {explained_variance[1]*100:.1f}%")
-            
-            # Show cluster centers
-            cluster_centers = clusters.groupby('cluster')[selected_features].mean().reset_index()
-            st.write("### Cluster Centers (Average Statistics)")
-            
-            # Format for display
-            for feature in selected_features:
-                if feature.endswith('_pct'):
-                    cluster_centers[feature] = cluster_centers[feature].round(3)
-                else:
-                    cluster_centers[feature] = cluster_centers[feature].round(1)
-            
-            st.dataframe(cluster_centers, use_container_width=True)
-            
-            # Show players in each cluster
-            st.write("### Players by Cluster")
-            selected_cluster = st.selectbox(
-                "Select cluster to view players",
-                options=sorted(clusters['cluster'].unique()),
-                key="cluster_select"
-            )
-            
-            # Filter to selected cluster and display
-            cluster_players = clusters[clusters['cluster'] == selected_cluster]
-            st.dataframe(
-                cluster_players[['full_name', 'team'] + selected_features].sort_values('full_name'),
-                use_container_width=True
-            )
+        # Create scatter plot
+        fig = px.scatter(
+            pca_df,
+            x='PC1',
+            y='PC2',
+            color='Cluster',
+            hover_name='Player',
+            hover_data=['Team'] + selected_features,
+            title="Player Clusters - PCA Visualization",
+            color_continuous_scale=px.colors.qualitative.G10
+        )
+        
+        st.plotly_chart(fig, use_container_width=True)
+        
+        # Display explained variance
+        explained_variance = pca.explained_variance_ratio_
+        st.info(f"PC1 explains {explained_variance[0]*100:.1f}% of the variance, PC2 explains {explained_variance[1]*100:.1f}%")
+        
+        # Show cluster centers
+        cluster_centers = clusters.groupby('cluster')[selected_features].mean().reset_index()
+        st.write("### Cluster Centers (Average Statistics)")
+        
+        # Format for display
+        for feature in selected_features:
+            if feature.endswith('_pct'):
+                cluster_centers[feature] = cluster_centers[feature].round(3)
+            else:
+                cluster_centers[feature] = cluster_centers[feature].round(1)
+        
+        st.dataframe(cluster_centers, use_container_width=True)
+        
+        # Show players in each cluster
+        st.write("### Players by Cluster")
+        
+        # Ensure cluster values are consistent in type
+        cluster_options = st.session_state.cluster_options
+
+        # Initialize selected_cluster in session state if not already set
+        if 'selected_cluster' not in st.session_state:
+            st.session_state.selected_cluster = cluster_options[0]
+
+        # Create a callback function to update session state BEFORE rerun
+        def on_cluster_change():
+            selected_option = st.session_state.cluster_select
+            st.session_state.selected_cluster = selected_option
+
+        # Dropdown for selecting a cluster - note the on_change parameter
+        selected_cluster = st.selectbox(
+            "Select cluster to view players",
+            options=cluster_options,
+            index=cluster_options.index(st.session_state.selected_cluster),
+            key="cluster_select",
+            on_change=on_cluster_change
+        )
+
+        # Filter players by the selected cluster
+        cluster_players = clusters[clusters['cluster'] == st.session_state.selected_cluster]
+
+        # Display the players in the selected cluster
+        st.dataframe(
+            cluster_players[['full_name', 'team'] + selected_features].sort_values('full_name'),
+            use_container_width=True
+        )
 
 # ================ SIMILARITY ANALYSIS ================
 
