@@ -93,15 +93,21 @@ def render_predictions(player_df, stats_df, teams_df):
     # Visualize predictions vs actual values
     visualize_prediction_comparison(predictions, validation_season, stats_to_predict, selected_player, latest_season)
     
+    # Rolling validation for more reliable accuracy signals
+    if len(player_stats) >= 4:
+        st.subheader("Rolling Validation (Historical Backtest)")
+        rolling_metrics = calculate_rolling_metrics(player_stats, stats_to_predict, model_type)
+        display_rolling_metrics(rolling_metrics)
+    
     # Future prediction section
     next_season = int(latest_season) + 1
     st.subheader(f"Future Performance Projection ({next_season})")
     
     # Make future predictions
-    future_predictions = predict_future_stats(player_stats, stats_to_predict, model_type)
+    future_predictions, prediction_intervals = predict_future_stats(player_stats, stats_to_predict, model_type)
     
     # Display future predictions
-    display_future_predictions(future_predictions, validation_season, stats_to_predict)
+    display_future_predictions(future_predictions, prediction_intervals, validation_season, stats_to_predict)
     
     # Show career prediction chart
     st.subheader(f"Career Trajectory Prediction for {selected_player}")
@@ -140,7 +146,7 @@ def validate_predictions(training_data, validation_data, stats_to_predict, model
     
     for stat in stats_to_predict:
         # Prepare training data
-        X = np.array(range(len(training_data))).reshape(-1, 1)  # Seasons as feature
+        X = training_data['season'].astype(int).values.reshape(-1, 1)
         y = training_data[stat].values
         
         # Train model
@@ -148,7 +154,7 @@ def validate_predictions(training_data, validation_data, stats_to_predict, model
         model.fit(X, y)
         
         # Make prediction for validation season
-        future_X = np.array([len(training_data)]).reshape(-1, 1)
+        future_X = np.array([[int(validation_data['season'].iloc[0])]])
         prediction = model.predict(future_X)[0]
         
         # Round appropriately
@@ -169,9 +175,10 @@ def validate_predictions(training_data, validation_data, stats_to_predict, model
 def predict_future_stats(player_stats, stats_to_predict, model_type):
     """Make predictions for future seasons"""
     future_predictions = {}
+    prediction_intervals = {}
     
     for stat in stats_to_predict:
-        X = np.array(range(len(player_stats))).reshape(-1, 1)
+        X = player_stats['season'].astype(int).values.reshape(-1, 1)
         y = player_stats[stat].values
         
         # Train model
@@ -179,13 +186,18 @@ def predict_future_stats(player_stats, stats_to_predict, model_type):
         model.fit(X, y)
         
         # Predict next season
-        future_X = np.array([len(player_stats)]).reshape(-1, 1)
+        next_season = int(player_stats['season'].max()) + 1
+        future_X = np.array([[next_season]])
         future_pred = model.predict(future_X)[0]
         
         # Round appropriately
         future_predictions[stat] = round_stat(future_pred, stat)
+        
+        if model_type == "Linear Regression":
+            lower, upper = calculate_prediction_interval(model, X, y, future_X)
+            prediction_intervals[stat] = (round_stat(lower, stat), round_stat(upper, stat))
     
-    return future_predictions
+    return future_predictions, prediction_intervals
 
 def get_model(model_type):
     """Return the appropriate model based on selection"""
@@ -264,23 +276,35 @@ def visualize_prediction_comparison(predictions, validation_data, stats_to_predi
     
     st.plotly_chart(fig, use_container_width=True)
 
-def display_future_predictions(future_predictions, current_data, stats_to_predict):
+def display_future_predictions(future_predictions, prediction_intervals, current_data, stats_to_predict):
     """Display future predictions in a styled table"""
     
     # Prepare data with appropriate format for each stat type
     changes = []
+    intervals = []
     for stat in stats_to_predict:
         diff = future_predictions[stat] - current_data[stat].iloc[0]
         if stat.endswith('_pct'):  # For percentage stats
             changes.append(f"{diff:+.3f}")  # 3 decimal places for percentages
         else:
             changes.append(f"{diff:+.1f}")  # 1 decimal place for counting stats
+        
+        interval = prediction_intervals.get(stat)
+        if interval:
+            lower, upper = interval
+            if stat.endswith('_pct'):
+                intervals.append(f"{lower:.3f} to {upper:.3f}")
+            else:
+                intervals.append(f"{lower:.1f} to {upper:.1f}")
+        else:
+            intervals.append("N/A")
     
     future_df = pd.DataFrame({
         'Statistic': stats_to_predict,
         'Projected Value': [future_predictions[stat] for stat in stats_to_predict],
         'Current Value': [current_data[stat].iloc[0] for stat in stats_to_predict],
-        'Change': changes
+        'Change': changes,
+        '95% Interval': intervals
     })
     
     # Style the change column
@@ -345,7 +369,7 @@ def visualize_career_trajectory(player_stats, selected_stat, next_season, model_
     # Add confidence interval for predictions (only for linear regression)
     if model_type == "Linear Regression":
         # Calculate confidence interval
-        conf_interval = calculate_confidence_interval(model, X, y, future_seasons, len(player_stats))
+        conf_interval = calculate_confidence_interval(model, X, y, future_seasons)
         
         # Add confidence interval
         fig.add_trace(go.Scatter(
@@ -377,7 +401,7 @@ def visualize_career_trajectory(player_stats, selected_stat, next_season, model_
 
 def predict_trajectory(player_stats, selected_stat, model_type, seasons_ahead):
     """Predict trajectory for multiple seasons ahead"""
-    X = np.array(range(len(player_stats))).reshape(-1, 1)
+    X = player_stats['season'].astype(int).values.reshape(-1, 1)
     y = player_stats[selected_stat].values
     
     # Train model
@@ -387,7 +411,7 @@ def predict_trajectory(player_stats, selected_stat, model_type, seasons_ahead):
     # Generate predictions
     future_values = []
     for i in range(seasons_ahead):
-        future_X = np.array([len(player_stats) + i]).reshape(-1, 1)
+        future_X = np.array([[int(player_stats['season'].max()) + 1 + i]])
         pred = model.predict(future_X)[0]
         future_values.append(round_stat(pred, selected_stat))
     
@@ -398,7 +422,7 @@ def display_model_metrics(player_stats, selected_stat, model_type):
     st.subheader("Model Evaluation Metrics")
     
     # Prepare data
-    X = np.array(range(len(player_stats))).reshape(-1, 1)
+    X = player_stats['season'].astype(int).values.reshape(-1, 1)
     y = player_stats[selected_stat].values
     
     # Train model
@@ -421,7 +445,7 @@ def display_model_metrics(player_stats, selected_stat, model_type):
     with col3:
         st.metric("R² Score", f"{train_r2:.2f}")
 
-def calculate_confidence_interval(model, X, y, future_seasons, num_historical_seasons, confidence=0.95):
+def calculate_confidence_interval(model, X, y, future_seasons, confidence=0.95):
     """Calculate confidence interval for linear regression predictions"""
     # Get model parameters
     n = len(y)
@@ -438,15 +462,9 @@ def calculate_confidence_interval(model, X, y, future_seasons, num_historical_se
     upper = []
     lower = []
     
-    for i, season in enumerate(future_seasons):
-        # Convert season to the same index format used in training
-        x_index = num_historical_seasons + i
-        
-        # Make prediction
-        pred = model.predict(np.array([[x_index]]))[0]
-        
-        # Calculate prediction interval
-        se_pred = se * np.sqrt(1 + 1/n + (x_index - np.mean(X))**2 / np.sum((X - np.mean(X))**2))
+    for season in future_seasons:
+        pred = model.predict(np.array([[season]]))[0]
+        se_pred = se * np.sqrt(1 + 1/n + (season - np.mean(X))**2 / np.sum((X - np.mean(X))**2))
         margin = t_value * se_pred
         
         upper.append(pred + margin)
@@ -456,3 +474,66 @@ def calculate_confidence_interval(model, X, y, future_seasons, num_historical_se
         'upper': upper,
         'lower': lower
     }
+
+def calculate_prediction_interval(model, X, y, future_X, confidence=0.95):
+    """Return lower/upper prediction interval for a single future point."""
+    n = len(y)
+    p = 2
+    y_pred = model.predict(X)
+    residuals = y - y_pred
+    mse = np.sum(residuals ** 2) / max(1, n - p)
+    se = np.sqrt(mse)
+    t_value = stats.t.ppf((1 + confidence) / 2, max(1, n - p))
+    
+    x_value = float(future_X[0][0])
+    se_pred = se * np.sqrt(1 + 1 / n + (x_value - np.mean(X)) ** 2 / np.sum((X - np.mean(X)) ** 2))
+    margin = t_value * se_pred
+    pred = model.predict(future_X)[0]
+    return pred - margin, pred + margin
+
+def calculate_rolling_metrics(player_stats, stats_to_predict, model_type, min_train=2):
+    """Backtest model performance using rolling-origin validation."""
+    metrics = {}
+    player_stats = player_stats.sort_values('season')
+    
+    for stat in stats_to_predict:
+        preds = []
+        actuals = []
+        for i in range(min_train, len(player_stats)):
+            train = player_stats.iloc[:i]
+            test = player_stats.iloc[i]
+            X_train = train['season'].astype(int).values.reshape(-1, 1)
+            y_train = train[stat].values
+            X_test = np.array([[int(test['season'])]])
+            
+            model = get_model(model_type)
+            model.fit(X_train, y_train)
+            preds.append(model.predict(X_test)[0])
+            actuals.append(test[stat])
+        
+        if preds:
+            mae = mean_absolute_error(actuals, preds)
+            rmse = np.sqrt(mean_squared_error(actuals, preds))
+            metrics[stat] = {'mae': mae, 'rmse': rmse}
+    
+    return metrics
+
+def display_rolling_metrics(metrics):
+    """Display rolling validation metrics in a compact table."""
+    if not metrics:
+        st.info("Not enough history for rolling validation.")
+        return
+    
+    rows = []
+    for stat, values in metrics.items():
+        rows.append({
+            'Statistic': stat,
+            'MAE': values['mae'],
+            'RMSE': values['rmse']
+        })
+    
+    df = pd.DataFrame(rows)
+    st.dataframe(
+        df.style.format({'MAE': '{:.2f}', 'RMSE': '{:.2f}'}),
+        use_container_width=True
+    )

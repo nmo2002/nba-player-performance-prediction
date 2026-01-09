@@ -425,7 +425,8 @@ def render_player_similarity(player_df, stats_df, teams_df):
                 player_df, 
                 feature_cols, 
                 similarity_threshold=similarity_threshold,
-                max_connections=15
+                max_connections=15,
+                max_nodes=max_players
             )
             
             if G is None or valid_data is None:
@@ -617,13 +618,19 @@ def render_player_similarity(player_df, stats_df, teams_df):
 # ================ NETWORK ANALYSIS ================
 
 def build_network(data_df, entity_info_df, features, entity_col='player_id', name_col='full_name',
-                 similarity_threshold=0.7, max_connections=15):
+                 similarity_threshold=0.7, max_connections=15, max_nodes=None):
     """Build a network of entities (players or teams) based on statistical similarity"""
     if data_df.empty:
         return None, None
         
     # Get entities with complete data
     valid_data = data_df.dropna(subset=features)
+    
+    if max_nodes and len(valid_data) > max_nodes:
+        if 'minutes' in valid_data.columns:
+            valid_data = valid_data.nlargest(max_nodes, 'minutes')
+        else:
+            valid_data = valid_data.sample(n=max_nodes, random_state=42)
     
     if len(valid_data) < 5:  # Need minimum number of entities
         return None, None

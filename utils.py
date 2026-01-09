@@ -109,8 +109,9 @@ def search_player(player_df, search_term):
         
         return 0
     
-    player_df['relevance'] = player_df['full_name'].apply(calc_relevance)
-    results = player_df[player_df['relevance'] > 0].sort_values('relevance', ascending=False)
+    relevance = player_df['full_name'].apply(calc_relevance)
+    results = player_df.assign(relevance=relevance)
+    results = results[results['relevance'] > 0].sort_values('relevance', ascending=False)
     
     return results.drop(columns=['relevance'])
 

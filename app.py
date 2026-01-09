@@ -27,8 +27,8 @@ warnings.filterwarnings('ignore', message='.*missing ScriptRunContext.*')
 # Import utilities
 from utils import check_and_install_dependencies, render_sidebar, apply_custom_styling, create_directory_if_not_exists
 from data_loader import (
-    load_player_data, load_stats_data, load_team_data, load_team_stats, 
-    fetch_and_refresh_nba_data, NBA_API_AVAILABLE
+    load_player_data, load_stats_data, load_team_data, load_team_stats,
+    fetch_and_refresh_nba_data, NBA_API_AVAILABLE, DATA_DIR, get_data_path
 )
 
 # Set up components path
@@ -249,6 +249,44 @@ def ensure_numeric_column(df, column):
     
     return df
 
+def ensure_int_column(df, column):
+    """Ensure a column is safely converted to integer where possible."""
+    if not isinstance(df, pd.DataFrame) or df.empty or column not in df.columns:
+        return df
+    
+    try:
+        df[column] = pd.to_numeric(df[column], errors='coerce').fillna(0).astype(int)
+    except Exception as e:
+        logger.error(f"Error converting {column} to int: {e}")
+    
+    return df
+
+def render_data_status(player_df, stats_df, teams_df):
+    """Render data health and freshness summary in the sidebar."""
+    with st.sidebar:
+        st.markdown("---")
+        st.markdown("### Data Status")
+        st.write(f"NBA API available: {'Yes' if NBA_API_AVAILABLE else 'No'}")
+        
+        if isinstance(player_df, pd.DataFrame) and not player_df.empty:
+            st.write(f"Players loaded: {len(player_df):,}")
+        if isinstance(stats_df, pd.DataFrame) and not stats_df.empty:
+            season_min = int(stats_df['season'].min()) if 'season' in stats_df.columns else "N/A"
+            season_max = int(stats_df['season'].max()) if 'season' in stats_df.columns else "N/A"
+            st.write(f"Player stats seasons: {season_min}–{season_max}")
+            st.write(f"Stat rows: {len(stats_df):,}")
+        if isinstance(teams_df, pd.DataFrame) and not teams_df.empty:
+            st.write(f"Teams loaded: {len(teams_df):,}")
+        
+        with st.expander("Data Files", expanded=False):
+            for name in ["players.csv", "player_stats.csv", "player_stats_multiseason.csv", "teams.csv", "team_stats.csv", "team_stats_multiseason.csv"]:
+                path = get_data_path(name)
+                if os.path.exists(path):
+                    mtime = time.strftime("%Y-%m-%d %H:%M", time.localtime(os.path.getmtime(path)))
+                    st.write(f"{name}: {mtime}")
+                else:
+                    st.write(f"{name}: missing")
+
 def render_performance_settings():
     """Render performance tuning settings in the sidebar"""
     with st.sidebar:
@@ -332,7 +370,9 @@ def main():
     if NBA_API_AVAILABLE:
         # Check if data files exist
         data_files_exist = all(os.path.exists(f) for f in [
-            'data/players.csv', 'data/player_stats.csv', 'data/teams.csv'
+            get_data_path('players.csv'),
+            get_data_path('player_stats.csv'),
+            get_data_path('teams.csv')
         ])
         
         if not data_files_exist:
@@ -442,11 +482,13 @@ def main():
                                     ['team_name', 'team_abbr', 'team_code', 'franchise'])
     stats_df = ensure_numeric_column(stats_df, 'team_id')
     stats_df = ensure_numeric_column(stats_df, 'player_id')  # Ensure player_id is numeric
+    stats_df = ensure_int_column(stats_df, 'season')
     
     # Team stats dataframe fixes
     if not team_stats_df.empty:
         team_stats_df = fix_dataframe_columns(team_stats_df, 'id', 'team_id')
         team_stats_df = ensure_numeric_column(team_stats_df, 'team_id')
+        team_stats_df = ensure_int_column(team_stats_df, 'season')
     
     # Ensure all player_id and team_id are consistently typed to avoid merge issues
     if not player_df.empty and 'id' in player_df.columns:
@@ -455,6 +497,9 @@ def main():
     # Store recent season in session state for future use
     if not stats_df.empty and 'season' in stats_df.columns:
         st.session_state.recent_season = int(stats_df['season'].max())
+    
+    # Sidebar data status summary
+    render_data_status(player_df, stats_df, teams_df)
     
     # Navigation components mapping
     components = {
