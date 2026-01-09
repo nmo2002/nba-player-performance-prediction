@@ -1,6 +1,7 @@
 # NBA Player Performance Prediction
 
 ## 📖 Project Overview
+
 The **NBA Player Performance Prediction** app forecasts key player performance metrics (e.g., points per game, rebounds) for upcoming NBA seasons using historical data. This predictive tool empowers NBA team owners and fantasy team managers to make structured, strategic decisions.
 
 ---
@@ -19,10 +20,12 @@ The **NBA Player Performance Prediction** app forecasts key player performance m
 ## ⚙️ Installation and Setup
 
 ### Prerequisites
+
 - Python 3.8 or higher
 - pip (Python package installer)
 
 ### Dependencies
+
 Ensure the following dependencies are installed:
 
 ```bash
@@ -47,12 +50,14 @@ pyvis
 ### Installation Steps
 
 1. **Clone the repository**
+
    ```bash
    git clone https://github.com/nmo2002/nba-player-performance-prediction.git
    cd https://github.com/nmo2002/nba-player-performance-prediction.git
    ```
 
 2. **Create and activate a virtual environment (optional but recommended)**
+
    ```bash
    python -m venv venv
    source venv/bin/activate  # Linux/Mac
@@ -60,6 +65,7 @@ pyvis
    ```
 
 3. **Install dependencies**
+
    ```bash
    pip install -r requirements.txt
    ```
@@ -75,6 +81,7 @@ streamlit run app.py
 ```
 
 The application opens automatically in your default web browser.
+
 - If it does not open automatically, visit [http://localhost:8501](http://localhost:8501).
 
 ---
@@ -90,6 +97,7 @@ The application opens automatically in your default web browser.
 ## 🗂️ Project Structure
 
 ### Features Guide
+
 - **Player Analysis:** Comprehensive statistics for individual players.
 - **Team Comparison:** Visual comparison of statistics between teams.
 - **Statistical Trends:** League-wide statistical trends over multiple seasons.
@@ -98,7 +106,9 @@ The application opens automatically in your default web browser.
 - **Player Similarity:** Identify statistically similar players.
 
 ### Performance Settings
+
 Adjust visualization quality from the sidebar:
+
 - **High Quality**
 - **Balanced**
 - **Fast** *(Recommended for low-end devices)*
@@ -106,6 +116,7 @@ Adjust visualization quality from the sidebar:
 ---
 
 ## 📚 Data Source
+
 - **NBA Stats API:** [https://pypi.org/project/nba_api/](https://pypi.org/project/nba_api/)
 
 ---
