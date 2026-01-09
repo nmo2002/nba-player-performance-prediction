@@ -297,6 +297,14 @@ def find_similar_entities(entity_id, data_df, entity_info_df, features, entity_c
         how='left'
     )
     
+    if name_col in similarity_df.columns:
+        similarity_df[name_col] = similarity_df[name_col].apply(
+            lambda x: x if pd.notna(x) and str(x).strip().lower() not in ['none', 'nan', ''] else None
+        )
+        similarity_df[name_col] = similarity_df[name_col].fillna(
+            similarity_df[entity_col].apply(lambda x: f"Player {int(x)}")
+        )
+    
     # Remove the entity itself and sort by similarity
     similarity_df = similarity_df[similarity_df[entity_col] != entity_id]
     similarity_df = similarity_df.sort_values('similarity', ascending=False).head(top_n)
@@ -378,21 +386,37 @@ def render_player_similarity(player_df, stats_df, teams_df):
         st.warning(f"No players found with at least {min_minutes} minutes per game.")
         return
     
+    if len(feature_cols) < 2:
+        st.warning("Please select at least 2 features for similarity analysis.")
+        return
+    
+    eligible_players = qualified_players.dropna(subset=feature_cols).copy()
+    
+    if eligible_players.empty:
+        st.warning("No players have complete data for the selected features. Try reducing features or minutes.")
+        return
+    
     # Get all player names for the dropdown
     # Join with player_df to get full names
-    if 'player_id' in qualified_players.columns and 'id' in player_df.columns:
+    if 'player_id' in eligible_players.columns and 'id' in player_df.columns:
         # Ensure consistent types for join
-        qualified_players['player_id'] = qualified_players['player_id'].astype('int64')
+        eligible_players['player_id'] = eligible_players['player_id'].astype('int64')
         player_df_copy = player_df.copy()
         player_df_copy['id'] = player_df_copy['id'].astype('int64')
         
-        player_names_df = qualified_players.merge(
+        player_names_df = eligible_players.merge(
             player_df_copy[['id', 'full_name']], 
             left_on='player_id', 
             right_on='id',
             how='left'
         )
-        player_names = player_names_df['full_name'].dropna().unique()
+        player_names_df['full_name'] = player_names_df.apply(
+            lambda row: row['full_name']
+            if pd.notna(row['full_name']) and str(row['full_name']).strip().lower() not in ['none', 'nan', '']
+            else f"Player {int(row['player_id'])}",
+            axis=1
+        )
+        player_names = player_names_df['full_name'].unique()
     else:
         st.error("Missing required ID columns in data. Please check the data format.")
         return
@@ -402,11 +426,6 @@ def render_player_similarity(player_df, stats_df, teams_df):
     
     # Let user select a player
     selected_player = st.selectbox("Select a Player", player_names)
-    
-    # Check if we have enough features and data
-    if len(feature_cols) < 2:
-        st.warning("Please select at least 2 features for similarity analysis.")
-        return
     
     # Calculate and display similar players
     if st.button("Find Similar Players"):
@@ -421,11 +440,12 @@ def render_player_similarity(player_df, stats_df, teams_df):
             
             # Build network
             G, valid_data = build_network(
-                qualified_players, 
+                eligible_players, 
                 player_df, 
                 feature_cols, 
                 similarity_threshold=similarity_threshold,
-                max_connections=15
+                max_connections=15,
+                max_nodes=max_players
             )
             
             if G is None or valid_data is None:
@@ -435,7 +455,7 @@ def render_player_similarity(player_df, stats_df, teams_df):
             # Get similar players
             similar_players = find_similar_entities(
                 player_id, 
-                qualified_players, 
+                eligible_players, 
                 player_df, 
                 feature_cols, 
                 top_n=15
@@ -617,13 +637,19 @@ def render_player_similarity(player_df, stats_df, teams_df):
 # ================ NETWORK ANALYSIS ================
 
 def build_network(data_df, entity_info_df, features, entity_col='player_id', name_col='full_name',
-                 similarity_threshold=0.7, max_connections=15):
+                 similarity_threshold=0.7, max_connections=15, max_nodes=None):
     """Build a network of entities (players or teams) based on statistical similarity"""
     if data_df.empty:
         return None, None
         
     # Get entities with complete data
     valid_data = data_df.dropna(subset=features)
+    
+    if max_nodes and len(valid_data) > max_nodes:
+        if 'minutes' in valid_data.columns:
+            valid_data = valid_data.nlargest(max_nodes, 'minutes')
+        else:
+            valid_data = valid_data.sample(n=max_nodes, random_state=42)
     
     if len(valid_data) < 5:  # Need minimum number of entities
         return None, None

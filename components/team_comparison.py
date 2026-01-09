@@ -505,6 +505,10 @@ def create_team_player_network(selected_teams, team_ids, player_df, stats_df, te
     
     stat_column = stat_options[selected_stat]
     
+    # Limit network size for performance
+    if len(player_info) > 300 and stat_column in player_info.columns:
+        player_info = player_info.nlargest(300, stat_column)
+    
     # Create network graph
     G = nx.Graph()
     
